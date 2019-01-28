@@ -10,19 +10,17 @@
     // TODO: we are not really honer the timeout here
     internal class TableRequestContext : RequestContext
     {
-        private object stateLock = new object();
+        private readonly string partitionKey;
 
-        private Func<Message, string, string, Task> WriteReplyMessageAsyncDelegate { get;}
+        private readonly string requestId;
 
-        private string partitionKey;
+        private readonly TimeSpan sendTimeout;
 
-        private string requestId;
+        private readonly object stateLock = new object();
 
-        private bool aborted = false;
+        private bool aborted;
 
         private CommunicationState state = CommunicationState.Opened;
-
-        private TimeSpan sendTimeout;
 
         public TableRequestContext(Message requestMessage, string partitionKey, string requestId, Func<Message, string, string, Task> writeReplyMessageAsyncDelegate, TimeSpan sendTimeout)
         {
@@ -32,6 +30,10 @@
             this.WriteReplyMessageAsyncDelegate = writeReplyMessageAsyncDelegate;
             this.sendTimeout = sendTimeout;
         }
+
+        public override Message RequestMessage { get; }
+
+        private Func<Message, string, string, Task> WriteReplyMessageAsyncDelegate { get; }
 
         public override void Abort()
         {
@@ -45,6 +47,38 @@
                 this.aborted = true;
                 this.state = CommunicationState.Faulted;
             }
+        }
+
+        public override IAsyncResult BeginReply(Message message, AsyncCallback callback, object state) => this.BeginReply(message, this.sendTimeout, callback, state);
+
+        public override IAsyncResult BeginReply(Message message, TimeSpan timeout, AsyncCallback callback, object state) => this.WriteReplyMessageAsync(message).AsApm(callback, state);
+
+        public override void Close()
+        {
+            this.Close(TimeSpan.MaxValue);
+        }
+
+        public override void Close(TimeSpan timeout)
+        {
+            lock (this.stateLock)
+            {
+                this.state = CommunicationState.Closed;
+            }
+        }
+
+        public override void EndReply(IAsyncResult result)
+        {
+            result.WaitApmTask();
+        }
+
+        public override void Reply(Message message)
+        {
+            this.Reply(message, this.sendTimeout);
+        }
+
+        public override void Reply(Message message, TimeSpan timeout)
+        {
+            this.WriteReplyMessageAsync(message).GetAwaiter().GetResult();
         }
 
         private void ThrowIfClosedOrFaulted()
@@ -65,42 +99,10 @@
             }
         }
 
-        public override void Close()
-        {
-            this.Close(TimeSpan.MaxValue);
-        }
-
-        public override void Close(TimeSpan timeout)
-        {
-            lock (this.stateLock)
-            {
-                this.state = CommunicationState.Closed;
-            }
-        }
-
-        public override void Reply(Message message) => this.Reply(message, this.sendTimeout);
-
-        public override void Reply(Message message, TimeSpan timeout)
-        {
-            this.WriteReplyMessageAsync(message).GetAwaiter().GetResult();
-        }
-
-        public override IAsyncResult BeginReply(Message message, AsyncCallback callback, object state) => this.BeginReply(message, this.sendTimeout, callback, state);
-
-        public override IAsyncResult BeginReply(Message message, TimeSpan timeout, AsyncCallback callback, object state) => this.WriteReplyMessageAsync(message).AsApm(callback, state);
-        
-
-        public override void EndReply(IAsyncResult result)
-        {
-            result.WaitApmTask();
-        }
-
         private Task WriteReplyMessageAsync(Message message)
         {
             this.ThrowIfClosedOrFaulted();
             return this.WriteReplyMessageAsyncDelegate(message, this.partitionKey, this.requestId);
         }
-
-        public override Message RequestMessage { get; }
     }
 }

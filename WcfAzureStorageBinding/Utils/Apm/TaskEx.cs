@@ -65,6 +65,16 @@
             return tcs.Task;
         }
 
+        public static T GetApmTaskResult<T>(this IAsyncResult result)
+        {
+            if (result is Task<T> apmTask)
+            {
+                return apmTask.Result;
+            }
+
+            throw new InvalidOperationException($"{nameof(GetApmTaskResult)} can only get result type {nameof(T)} on {nameof(Task<T>)}");
+        }
+
         public static void WaitApmTask(this IAsyncResult result)
         {
             if (result is Task apmTask)
@@ -74,18 +84,6 @@
             else
             {
                 throw new InvalidOperationException($"{nameof(WaitApmTask)} can only wait on {nameof(Task)}");
-            }
-        }
-
-        public static T GetApmTaskResult<T>(this IAsyncResult result)
-        {
-            if (result is Task<T> apmTask)
-            {
-                return apmTask.Result;
-            }
-            else
-            {
-                throw new InvalidOperationException($"{nameof(GetApmTaskResult)} can only get result type {nameof(T)} on {nameof(Task<T>)}");
             }
         }
     }

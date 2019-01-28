@@ -5,17 +5,7 @@
 
     internal class CompletedAsyncResult : IAsyncResult
     {
-        public static CompletedAsyncResult Create(AsyncCallback callback, object state)
-        {
-            var result = new CompletedAsyncResult(state);
-            callback?.Invoke(result);
-            return result;
-        }
-
-        public CompletedAsyncResult(object state)
-        {
-            this.AsyncState = state;
-        }
+        public CompletedAsyncResult(object state) => this.AsyncState = state;
 
         public object AsyncState { get; set; }
 
@@ -24,5 +14,12 @@
         public bool CompletedSynchronously => true;
 
         public bool IsCompleted => true;
+
+        public static CompletedAsyncResult Create(AsyncCallback callback, object state)
+        {
+            var result = new CompletedAsyncResult(state);
+            callback?.Invoke(result);
+            return result;
+        }
     }
 }

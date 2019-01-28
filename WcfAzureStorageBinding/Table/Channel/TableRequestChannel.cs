@@ -22,38 +22,10 @@
             BufferManager bufferManager,
             EndpointAddress address,
             MessageEncoder encoder,
-            Uri via) : base(channelManager, tableClient, via.AbsolutePath, targetPartition, bufferManager, address, encoder)
-        {
+            Uri via) : base(channelManager, tableClient, via.AbsolutePath, targetPartition, bufferManager, address, encoder) =>
             this.Via = via;
-        }
 
-        protected override void OnAbort()
-        {
-        }
-
-        protected override void OnClose(TimeSpan timeout)
-        {
-        }
-
-        protected override void OnEndClose(IAsyncResult result)
-        {
-        }
-
-        protected override IAsyncResult OnBeginClose(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create( callback, state);
-
-        protected override void OnOpen(TimeSpan timeout)
-        {
-        }
-
-        protected override IAsyncResult OnBeginOpen(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create( callback, state);
-
-        protected override void OnEndOpen(IAsyncResult result)
-        {
-        }
-
-        public Message Request(Message message) => this.Request(message, this.DefaultReceiveTimeout);
-
-        public Message Request(Message message, TimeSpan timeout) => this.RequestAsync(message, timeout).GetAwaiter().GetResult();
+        public Uri Via { get; }
 
         public IAsyncResult BeginRequest(Message message, AsyncCallback callback, object state) => this.BeginRequest(message, this.DefaultReceiveTimeout, callback, state);
 
@@ -61,7 +33,9 @@
 
         public Message EndRequest(IAsyncResult result) => ((Task<Message>)result).Result;
 
-        public Uri Via { get; }
+        public Message Request(Message message) => this.Request(message, this.DefaultReceiveTimeout);
+
+        public Message Request(Message message, TimeSpan timeout) => this.RequestAsync(message, timeout).GetAwaiter().GetResult();
 
         public async Task<Message> RequestAsync(Message requestMessage, TimeSpan timeout)
         {
@@ -69,7 +43,7 @@
 
             try
             {
-                string reqId = Guid.NewGuid().ToString();
+                var reqId = Guid.NewGuid().ToString();
 
                 // Write the request message
                 await this.WriteRequestMessageAsync(requestMessage, reqId).ConfigureAwait(false);
@@ -81,6 +55,30 @@
             {
                 throw new CommunicationException(exception.Message, exception);
             }
+        }
+
+        protected override void OnAbort()
+        {
+        }
+
+        protected override IAsyncResult OnBeginClose(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create(callback, state);
+
+        protected override IAsyncResult OnBeginOpen(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create(callback, state);
+
+        protected override void OnClose(TimeSpan timeout)
+        {
+        }
+
+        protected override void OnEndClose(IAsyncResult result)
+        {
+        }
+
+        protected override void OnEndOpen(IAsyncResult result)
+        {
+        }
+
+        protected override void OnOpen(TimeSpan timeout)
+        {
         }
 
         private async Task<Message> TryGetReplyMessageAsync(string reqId, TimeSpan timeout)
@@ -99,10 +97,8 @@
                 {
                     throw new TimeoutException(timeout.ToString());
                 }
-                else
-                {
-                    return res;
-                }
+
+                return res;
             }
             catch (StorageException exception)
             {
@@ -110,9 +106,6 @@
             }
         }
 
-        private Task WriteRequestMessageAsync(Message message, string requestId)
-        {
-            return this.WriteMessageAsync(this.RequestTableName, message, this.TargetPartition, requestId);
-        }
+        private Task WriteRequestMessageAsync(Message message, string requestId) => this.WriteMessageAsync(this.RequestTableName, message, this.TargetPartition, requestId);
     }
 }

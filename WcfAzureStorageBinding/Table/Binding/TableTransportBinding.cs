@@ -1,17 +1,13 @@
 ﻿namespace AzureStorageBinding.Table.Binding
 {
     using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.ServiceModel.Channels;
-    using System.Text;
-    using System.Threading.Tasks;
 
     public class TableTransportBinding : Binding
     {
-        private TableTransportBindingElement transportBindingElement;
+        private readonly MessageEncodingBindingElement messageEncodingBindingElement;
 
-        private MessageEncodingBindingElement messageEncodingBindingElement;
+        private readonly TableTransportBindingElement transportBindingElement;
 
         public TableTransportBinding()
         {
@@ -19,12 +15,9 @@
             this.messageEncodingBindingElement = new TextMessageEncodingBindingElement();
         }
 
-        public override BindingElementCollection CreateBindingElements()
-        {
-            return new BindingElementCollection() { this.transportBindingElement, this.messageEncodingBindingElement };
-        }
-
         public override string Scheme => this.transportBindingElement.Scheme;
+
+        public override BindingElementCollection CreateBindingElements() => new BindingElementCollection { this.transportBindingElement, this.messageEncodingBindingElement };
 
         internal void ApplySetting(string connectionString, string targetPartitionKey)
         {

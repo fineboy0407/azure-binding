@@ -17,7 +17,7 @@
 
             do
             {
-                TableQuerySegment<T> seg = await table.ExecuteQuerySegmentedAsync(query, token, ct).ConfigureAwait(false);
+                var seg = await table.ExecuteQuerySegmentedAsync(query, token, ct).ConfigureAwait(false);
                 token = seg.ContinuationToken;
                 items.AddRange(seg);
                 onProgress?.Invoke(items);

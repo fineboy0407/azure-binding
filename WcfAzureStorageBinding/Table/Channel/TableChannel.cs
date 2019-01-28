@@ -1,7 +1,6 @@
 ﻿namespace AzureStorageBinding.Table.Channel
 {
     using System;
-    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
     using System.ServiceModel;
@@ -20,30 +19,11 @@
     {
         private const int MaxBufferSize = 64 * 1024;
 
-        internal string TargetPartition { get; private set; }
-
-        protected CloudTableClient CloudTableClient { get; }
-
-        protected string TableName { get; }
-
-        protected string RequestTableName => TableNameGenerator.GetRequestTableName(this.TableName);
-
-        protected string ResponseTableName => TableNameGenerator.GetResponseTableName(this.TableName);
+        private static readonly TimeSpan PullInterval = TimeSpan.FromSeconds(1);
 
         private readonly BufferManager bufferManager;
 
-        protected bool ChannelClosed { get; private set; } = false;
-
-        public EndpointAddress RemoteAddress { get; }
-
         private readonly MessageEncoder encoder;
-
-        private static readonly TimeSpan PullInterval = TimeSpan.FromSeconds(1);
-
-        protected void CloseChannel()
-        {
-            this.ChannelClosed = true;
-        }
 
         protected TableChannel(
             ChannelManagerBase channelManager,
@@ -62,76 +42,25 @@
             this.TableName = tableName;
         }
 
-        private Message DecodeMessage(ArraySegment<byte> buffer)
+        public EndpointAddress RemoteAddress { get; }
+
+        internal string TargetPartition { get; }
+
+        protected bool ChannelClosed { get; private set; }
+
+        protected CloudTableClient CloudTableClient { get; }
+
+        protected string RequestTableName => TableNameGenerator.GetRequestTableName(this.TableName);
+
+        protected string ResponseTableName => TableNameGenerator.GetResponseTableName(this.TableName);
+
+        protected string TableName { get; }
+
+        private bool TargetAllPartition => string.IsNullOrEmpty(this.TargetPartition) || this.TargetPartition.Equals(TableConstants.TargetAllPartitionToken, StringComparison.OrdinalIgnoreCase);
+
+        protected void CloseChannel()
         {
-            if (buffer.Array == null)
-            {
-                return null;
-            }
-            else
-            {
-                return this.encoder.ReadMessage(buffer, this.bufferManager);
-            }
-        }
-
-        private ArraySegment<byte> EncodeMessage(Message message)
-        {
-            if (message == null)
-            {
-                throw new ArgumentNullException(nameof(message));
-            }
-
-            return this.encoder.WriteMessage(message, MaxBufferSize, this.bufferManager);
-        }
-
-        protected async Task<(bool, Message)> TryPopMessageFromTableAsync(string tableName, TableQuery<WcfTableEntity> tableQuery, TimeSpan timeout)
-        {
-            WcfTableEntity entity = null;
-            try
-            {
-                var (succeed, res) = await this.TryGetTableEntityAsync(tableName, tableQuery, timeout);
-                if (succeed)
-                {
-                    entity = res;
-                    return (true, this.ReadMessageFromTableEntity(entity));
-                }
-            }
-            finally
-            {
-                if (entity != null)
-                {
-                    await this.RemoveTableEntityAsync(tableName, entity);
-                }
-            }
-
-            return (false, null);
-        }
-
-        protected Task<(bool, Message)> TryPopMessageFromTableAsync(string tableName, TimeSpan timeout)
-        {
-            return this.TryPopMessageFromTableAsync(tableName, this.BuildTableQuery(), timeout);
-        }
-
-        protected async Task<Message> PopMessageFromTableAsync(string tableName, TableQuery<WcfTableEntity> tableQuery)
-        {
-            WcfTableEntity entity = null;
-            try
-            {
-                entity = await this.GetTableEntityAsync(tableQuery);
-                return this.ReadMessageFromTableEntity(entity);
-            }
-            finally
-            {
-                if (entity != null)
-                {
-                    await this.RemoveTableEntityAsync(tableName, entity);
-                }
-            }
-        }
-
-        protected Task<Message> PopMessageFromTableAsync(string tableName)
-        {
-            return this.PopMessageFromTableAsync(tableName, new TableQuery <WcfTableEntity> { FilterString = this.GetFilterString(), TakeCount = 1 });
+            this.ChannelClosed = true;
         }
 
         protected async Task<WcfTableEntity> PopEntryFromTableAsync(string tableName)
@@ -151,19 +80,13 @@
             }
         }
 
-        protected async Task<(bool, WcfTableEntity)> TryPopEntityFromTableAsync(string tableName, TimeSpan timeout)
+        protected async Task<Message> PopMessageFromTableAsync(string tableName, TableQuery<WcfTableEntity> tableQuery)
         {
             WcfTableEntity entity = null;
             try
             {
-                var (succeed, res) = await this.TryGetTableEntityAsync(tableName, this.BuildTableQuery(), timeout);
-                if (succeed)
-                {
-                    entity = res;
-                }
-
-                return (succeed, res);
-
+                entity = await this.GetTableEntityAsync(tableQuery);
+                return this.ReadMessageFromTableEntity(entity);
             }
             finally
             {
@@ -174,8 +97,23 @@
             }
         }
 
+        protected Task<Message> PopMessageFromTableAsync(string tableName) =>
+            this.PopMessageFromTableAsync(tableName, new TableQuery<WcfTableEntity> { FilterString = this.GetFilterString(), TakeCount = 1 });
+
+        protected Message ReadMessageFromTableEntity(WcfTableEntity entity)
+        {
+            // TODO: stackalloc
+            byte[] data = null;
+            var byteLength = Encoding.UTF8.GetByteCount(entity.Message);
+
+            data = this.bufferManager.TakeBuffer(byteLength);
+            Encoding.UTF8.GetBytes(entity.Message, 0, entity.Message.Length, data, 0);
+            var buffer = new ArraySegment<byte>(data, 0, byteLength);
+            return this.DecodeMessage(buffer);
+        }
+
         /// <summary>
-        /// Try to peek a request
+        ///     Try to peek a request
         /// </summary>
         /// <param name="tableName"></param>
         /// <param name="timeout"></param>
@@ -183,7 +121,7 @@
         protected Task<(bool, WcfTableEntity)> TryGetTableEntityAsync(string tableName, TimeSpan timeout) => this.TryGetTableEntityAsync(tableName, this.BuildTableQuery(), timeout);
 
         /// <summary>
-        /// Try to peek a request
+        ///     Try to peek a request
         /// </summary>
         /// <param name="tableName"></param>
         /// <param name="tableQuery"></param>
@@ -209,10 +147,8 @@
                     {
                         return (true, res.First());
                     }
-                    else
-                    {
-                        await Task.Delay(PullInterval).ConfigureAwait(false);
-                    }
+
+                    await Task.Delay(PullInterval).ConfigureAwait(false);
                 }
 
                 return (false, null);
@@ -223,65 +159,52 @@
             }
         }
 
-        private async Task<WcfTableEntity> GetTableEntityAsync(TableQuery<WcfTableEntity> tableQuery)
+        protected async Task<(bool, WcfTableEntity)> TryPopEntityFromTableAsync(string tableName, TimeSpan timeout)
         {
-            var cloudTable = this.CloudTableClient.GetTableReference(this.TableName);
-            var result = await cloudTable.ExecuteQueryAsync(tableQuery);
-            Debug.Assert(result.Any());
-            return result.First();
-        }
-
-        protected Message ReadMessageFromTableEntity(WcfTableEntity entity)
-        {
-            // TODO: stackalloc
-            byte[] data = null;
-            int byteLength = Encoding.UTF8.GetByteCount(entity.Message);
-
-            data = this.bufferManager.TakeBuffer(byteLength);
-            Encoding.UTF8.GetBytes(entity.Message, 0, entity.Message.Length, data, 0);
-            var buffer = new ArraySegment<byte>(data, 0, byteLength);
-            return this.DecodeMessage(buffer);
-        }
-
-        private async Task RemoveTableEntityAsync(string tableName, WcfTableEntity entity)
-        {
-            if (entity == null)
+            WcfTableEntity entity = null;
+            try
             {
-                return;
-            }
-
-            // TODO: need reliability
-            var cloudTable = this.CloudTableClient.GetTableReference(tableName);
-            await cloudTable.ExecuteAsync(TableOperation.Delete(entity)).ConfigureAwait(false);
-        }
-
-        private bool TargetAllPartition => string.IsNullOrEmpty(this.TargetPartition) || this.TargetPartition.Equals(TableConstants.TargetAllPartitionToken, StringComparison.OrdinalIgnoreCase);
-
-        private string GetFilterString()
-        {
-            {
-                if (this.TargetAllPartition)
+                var (succeed, res) = await this.TryGetTableEntityAsync(tableName, this.BuildTableQuery(), timeout);
+                if (succeed)
                 {
-                    return string.Empty;
+                    entity = res;
                 }
-                else
+
+                return (succeed, res);
+            }
+            finally
+            {
+                if (entity != null)
                 {
-                    return $@"PartitionKey = ""{this.TargetPartition}""";
+                    await this.RemoveTableEntityAsync(tableName, entity);
                 }
             }
         }
 
-        private TableQuery<WcfTableEntity> BuildTableQuery()
+        protected async Task<(bool, Message)> TryPopMessageFromTableAsync(string tableName, TableQuery<WcfTableEntity> tableQuery, TimeSpan timeout)
         {
-            if (this.TargetAllPartition)
+            WcfTableEntity entity = null;
+            try
             {
-                return new TableQuery<WcfTableEntity>().Take(1);
+                var (succeed, res) = await this.TryGetTableEntityAsync(tableName, tableQuery, timeout);
+                if (succeed)
+                {
+                    entity = res;
+                    return (true, this.ReadMessageFromTableEntity(entity));
+                }
             }
-            else
+            finally
             {
-                return new TableQuery<WcfTableEntity>().Where(TableQuery.GenerateFilterCondition(TableConstants.PartitionKeyPropertyName, QueryComparisons.Equal, this.TargetPartition)).Take(1);
+                if (entity != null)
+                {
+                    await this.RemoveTableEntityAsync(tableName, entity);
+                }
             }
+
+            return (false, null);
         }
+
+        protected Task<(bool, Message)> TryPopMessageFromTableAsync(string tableName, TimeSpan timeout) => this.TryPopMessageFromTableAsync(tableName, this.BuildTableQuery(), timeout);
 
         protected async Task WriteMessageAsync(string tableName, Message message, string partitionKey, string requestId)
         {
@@ -306,6 +229,68 @@
                     this.bufferManager.ReturnBuffer(buffer.Array);
                 }
             }
+        }
+
+        private TableQuery<WcfTableEntity> BuildTableQuery()
+        {
+            if (this.TargetAllPartition)
+            {
+                return new TableQuery<WcfTableEntity>().Take(1);
+            }
+
+            return new TableQuery<WcfTableEntity>().Where(TableQuery.GenerateFilterCondition(TableConstants.PartitionKeyPropertyName, QueryComparisons.Equal, this.TargetPartition)).Take(1);
+        }
+
+        private Message DecodeMessage(ArraySegment<byte> buffer)
+        {
+            if (buffer.Array == null)
+            {
+                return null;
+            }
+
+            return this.encoder.ReadMessage(buffer, this.bufferManager);
+        }
+
+        private ArraySegment<byte> EncodeMessage(Message message)
+        {
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            return this.encoder.WriteMessage(message, MaxBufferSize, this.bufferManager);
+        }
+
+        private string GetFilterString()
+        {
+            {
+                if (this.TargetAllPartition)
+                {
+                    return string.Empty;
+                }
+
+                return $@"PartitionKey = ""{this.TargetPartition}""";
+            }
+        }
+
+        private async Task<WcfTableEntity> GetTableEntityAsync(TableQuery<WcfTableEntity> tableQuery)
+        {
+            var cloudTable = this.CloudTableClient.GetTableReference(this.TableName);
+            var result = await cloudTable.ExecuteQueryAsync(tableQuery);
+            Debug.Assert(result.Any());
+            return result.First();
+        }
+
+        private async Task RemoveTableEntityAsync(string tableName, WcfTableEntity entity)
+        {
+            if (entity == null)
+            {
+                return;
+            }
+
+            // TODO: need reliability
+            var cloudTable = this.CloudTableClient.GetTableReference(tableName);
+            await cloudTable.ExecuteAsync(TableOperation.Delete(entity)).ConfigureAwait(false);
         }
     }
 }

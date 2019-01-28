@@ -11,15 +11,15 @@
 
     internal class TableRequestChannelFactory : ChannelFactoryBase<IRequestChannel>
     {
-        private string targetPartitionKey;
+        private readonly BufferManager bufferManager;
 
-        private MessageEncoderFactory encoderFactory;
+        private readonly MessageEncoderFactory encoderFactory;
 
-        private BufferManager bufferManager;
+        private readonly CloudStorageAccount storageAccount;
 
-        private CloudStorageAccount storageAccount;
+        private readonly string targetPartitionKey;
 
-        public TableRequestChannelFactory(BindingContext context, TableTransportBindingElement element):base(context.Binding)
+        public TableRequestChannelFactory(BindingContext context, TableTransportBindingElement element) : base(context.Binding)
         {
             this.encoderFactory = context.BindingParameters.Remove<MessageEncodingBindingElement>().CreateMessageEncoderFactory();
             this.bufferManager = BufferManager.CreateBufferManager(element.MaxBufferPoolSize, int.MaxValue);
@@ -27,19 +27,17 @@
             this.storageAccount = CloudStorageAccount.Parse(element.ConnectionString);
         }
 
-        protected override void OnOpen(TimeSpan timeout)
-        {
-        }
+        protected override IAsyncResult OnBeginOpen(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create(callback, state);
 
-        protected override IAsyncResult OnBeginOpen(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create( callback, state);
+        protected override IRequestChannel OnCreateChannel(EndpointAddress address, Uri via) =>
+            new TableRequestChannel(this, this.storageAccount.CreateCloudTableClient(), this.targetPartitionKey, this.bufferManager, address, this.encoderFactory.CreateSessionEncoder(), via);
 
         protected override void OnEndOpen(IAsyncResult result)
         {
         }
 
-        protected override IRequestChannel OnCreateChannel(EndpointAddress address, Uri via)
+        protected override void OnOpen(TimeSpan timeout)
         {
-            return new TableRequestChannel(this, this.storageAccount.CreateCloudTableClient(), this.targetPartitionKey, this.bufferManager, address, this.encoderFactory.CreateSessionEncoder(), via);
         }
     }
 }

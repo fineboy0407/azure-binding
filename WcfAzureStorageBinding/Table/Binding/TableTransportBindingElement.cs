@@ -7,27 +7,11 @@
 
     public class TableTransportBindingElement : TransportBindingElement
     {
-        public TableTransportBindingElement()
-        {
-        }
-
-        public override BindingElement Clone() => new TableTransportBindingElement { ConnectionString = this.ConnectionString, TargetPartitionKey = this.TargetPartitionKey };
-
-        public string TargetPartitionKey { get; set; }
-
         public string ConnectionString { get; set; }
 
         public override string Scheme { get; } = "az.table";
 
-        public override bool CanBuildChannelFactory<TChannel>(BindingContext context)
-        {
-            return typeof(TChannel) == typeof(IRequestChannel);
-        }
-
-        public override bool CanBuildChannelListener<TChannel>(BindingContext context)
-        {
-            return typeof(TChannel) == typeof(IReplyChannel);
-        }
+        public string TargetPartitionKey { get; set; }
 
         public override IChannelFactory<TChannel> BuildChannelFactory<TChannel>(BindingContext context)
         {
@@ -58,5 +42,11 @@
 
             return (IChannelListener<TChannel>)new TableReplyChannelListener(context, this);
         }
+
+        public override bool CanBuildChannelFactory<TChannel>(BindingContext context) => typeof(TChannel) == typeof(IRequestChannel);
+
+        public override bool CanBuildChannelListener<TChannel>(BindingContext context) => typeof(TChannel) == typeof(IReplyChannel);
+
+        public override BindingElement Clone() => new TableTransportBindingElement { ConnectionString = this.ConnectionString, TargetPartitionKey = this.TargetPartitionKey };
     }
 }

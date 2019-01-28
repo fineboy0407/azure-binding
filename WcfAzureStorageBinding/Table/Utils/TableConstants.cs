@@ -10,10 +10,10 @@
 
         internal const string ResponseTableNameSuffix = "-Response";
 
-        public static string TargetAllPartitionToken => "all";
-
         public static string PartitionKeyPropertyName => "PartitionKey";
 
         public static string RowKeyPropertyName => "RowKey";
+
+        public static string TargetAllPartitionToken => "all";
     }
 }

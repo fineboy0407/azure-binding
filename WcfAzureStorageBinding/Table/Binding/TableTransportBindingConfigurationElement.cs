@@ -9,21 +9,6 @@
 
     public class TableTransportBindingConfigurationElement : StandardBindingElement
     {
-        protected override void OnApplyConfiguration(Binding binding)
-        {
-            if (binding == null)
-            {
-                throw new ArgumentNullException(nameof(binding));
-            }
-
-            if (binding is TableTransportBinding tableBinding)
-            {
-                tableBinding.ApplySetting(this.ConnectionString, this.TargetPartitionKey);
-            }
-        }
-
-        protected override Type BindingElementType { get; }
-
         [ConfigurationProperty(TableConstants.ConnectionStringConfigureName)]
         public string ConnectionString
         {
@@ -38,6 +23,8 @@
             set => base[TableConstants.TargetPartitionKeyConfigureName] = value;
         }
 
+        protected override Type BindingElementType { get; }
+
         protected override ConfigurationPropertyCollection Properties
         {
             get
@@ -46,6 +33,19 @@
                 properties.Add(new ConfigurationProperty(TableConstants.ConnectionStringConfigureName, typeof(string)));
                 properties.Add(new ConfigurationProperty(TableConstants.TargetPartitionKeyConfigureName, typeof(string)));
                 return properties;
+            }
+        }
+
+        protected override void OnApplyConfiguration(Binding binding)
+        {
+            if (binding == null)
+            {
+                throw new ArgumentNullException(nameof(binding));
+            }
+
+            if (binding is TableTransportBinding tableBinding)
+            {
+                tableBinding.ApplySetting(this.ConnectionString, this.TargetPartitionKey);
             }
         }
     }
