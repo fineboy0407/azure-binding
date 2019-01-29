@@ -10,6 +10,7 @@
 
     using AzureStorageBinding.Table.DTO;
     using AzureStorageBinding.Table.Utils;
+    using AzureStorageBinding.Utils;
     using AzureStorageBinding.Utils.AzureStorage;
 
     using Microsoft.WindowsAzure.Storage;
@@ -139,16 +140,7 @@
             {
                 var cloudTable = this.CloudTableClient.GetTableReference(tableName);
 
-                DateTime end;
-                try
-                {
-                    end = DateTime.Now + timeout;
-                }
-                catch (ArgumentOutOfRangeException)
-                {
-                    // The arithmetic result is out of range. Set timeout to max value.
-                    end = DateTime.MaxValue;
-                }
+                DateTime end = timeout.AfterTimeSpanFromNow();
 
                 while (!this.ChannelClosed && DateTime.Now < end)
                 {
