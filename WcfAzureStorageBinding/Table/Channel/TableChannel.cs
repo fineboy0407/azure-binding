@@ -138,7 +138,18 @@
             try
             {
                 var cloudTable = this.CloudTableClient.GetTableReference(tableName);
-                var end = DateTime.Now + timeout;
+
+                DateTime end;
+                try
+                {
+                    end = DateTime.Now + timeout;
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    // The arithmetic result is out of range. Set timeout to max value.
+                    end = DateTime.MaxValue;
+                }
+
                 while (!this.ChannelClosed && DateTime.Now < end)
                 {
                     var res = await cloudTable.ExecuteQueryAsync(tableQuery).ConfigureAwait(false);

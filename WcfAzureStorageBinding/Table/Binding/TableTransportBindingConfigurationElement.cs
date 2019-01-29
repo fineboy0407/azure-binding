@@ -16,14 +16,14 @@
             set => base[TableConstants.ConnectionStringConfigureName] = value;
         }
 
-        [ConfigurationProperty(TableConstants.TargetPartitionKeyConfigureName)]
+        [ConfigurationProperty(TableConstants.TargetPartitionKeyConfigureName, DefaultValue = TableConstants.TargetAllPartitionToken)]
         public string TargetPartitionKey
         {
             get => (string)base[TableConstants.TargetPartitionKeyConfigureName];
             set => base[TableConstants.TargetPartitionKeyConfigureName] = value;
         }
 
-        protected override Type BindingElementType { get; }
+        protected override Type BindingElementType => typeof(TableTransportBinding);
 
         protected override ConfigurationPropertyCollection Properties
         {

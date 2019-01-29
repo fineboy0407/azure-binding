@@ -17,7 +17,7 @@
 
         public override string Scheme => this.transportBindingElement.Scheme;
 
-        public override BindingElementCollection CreateBindingElements() => new BindingElementCollection { this.transportBindingElement, this.messageEncodingBindingElement };
+        public override BindingElementCollection CreateBindingElements() => new BindingElementCollection { this.messageEncodingBindingElement, this.transportBindingElement };
 
         internal void ApplySetting(string connectionString, string targetPartitionKey)
         {

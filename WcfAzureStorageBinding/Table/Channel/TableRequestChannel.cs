@@ -93,7 +93,7 @@
             try
             {
                 var (succeed, res) = await this.TryPopMessageFromTableAsync(this.ResponseTableName, tableQuery, timeout);
-                if (succeed)
+                if (!succeed)
                 {
                     throw new TimeoutException(timeout.ToString());
                 }

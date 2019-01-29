@@ -3,6 +3,7 @@
     using System;
     using System.ServiceModel;
     using System.ServiceModel.Channels;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using AzureStorageBinding.Table.Binding;
@@ -21,7 +22,7 @@
 
         private readonly string targetPartitionKey;
 
-        private TableReplyChannel replyChannel;
+        private readonly Lazy<TableReplyChannel> replyChannel;
 
         public TableReplyChannelListener(BindingContext context, TableTransportBindingElement element) : base(context.Binding)
         {
@@ -30,6 +31,19 @@
             this.targetPartitionKey = element.TargetPartitionKey;
             this.storageAccount = CloudStorageAccount.Parse(element.ConnectionString);
             this.Uri = new Uri(context.ListenUriBaseAddress, context.ListenUriRelativeAddress);
+            this.replyChannel = new Lazy<TableReplyChannel>(
+                () =>
+                    {
+                        var address = new EndpointAddress(this.Uri);
+                        return new TableReplyChannel(
+                            this,
+                            this.storageAccount.CreateCloudTableClient(),
+                            this.Uri.AbsolutePath,
+                            this.targetPartitionKey,
+                            this.bufferManager,
+                            address,
+                            this.encoderFactory.CreateSessionEncoder());
+                    });
         }
 
         public override Uri Uri { get; }
@@ -40,25 +54,17 @@
         {
         }
 
-        protected override IReplyChannel OnAcceptChannel(TimeSpan timeout)
+        protected override IReplyChannel OnAcceptChannel(TimeSpan timeout) => this.replyChannel.Value;
+
+        protected override IAsyncResult OnBeginAcceptChannel(TimeSpan timeout, AsyncCallback callback, object state)
         {
-            if (this.replyChannel == null)
+            if (this.replyChannel.IsValueCreated)
             {
-                var address = new EndpointAddress(this.Uri);
-                this.replyChannel = new TableReplyChannel(
-                    this,
-                    this.storageAccount.CreateCloudTableClient(),
-                    this.Uri.AbsolutePath,
-                    this.targetPartitionKey,
-                    this.bufferManager,
-                    address,
-                    this.encoderFactory.CreateSessionEncoder());
+                Thread.Sleep(-1);
             }
 
-            return this.replyChannel;
+            return CompletedAsyncResult.Create(callback, state);
         }
-
-        protected override IAsyncResult OnBeginAcceptChannel(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create(callback, state);
 
         protected override IAsyncResult OnBeginClose(TimeSpan timeout, AsyncCallback callback, object state) => CompletedAsyncResult.Create(callback, state);
 
@@ -70,7 +76,7 @@
         {
         }
 
-        protected override IReplyChannel OnEndAcceptChannel(IAsyncResult result) => this.OnAcceptChannel(TimeSpan.MaxValue);
+        protected override IReplyChannel OnEndAcceptChannel(IAsyncResult result) => this.replyChannel.Value;
 
         protected override void OnEndClose(IAsyncResult result)
         {
