@@ -7,6 +7,16 @@
 
     public class TableTransportBindingElement : TransportBindingElement
     {
+        public TableTransportBindingElement(TableTransportBindingElement bindingElement) : base(bindingElement)
+        {
+            this.ConnectionString = bindingElement.ConnectionString;
+            this.TargetPartitionKey = bindingElement.TargetPartitionKey;
+        }
+
+        public TableTransportBindingElement()
+        {
+        }
+
         public string ConnectionString { get; set; }
 
         public override string Scheme { get; } = "az.table";
@@ -47,6 +57,6 @@
 
         public override bool CanBuildChannelListener<TChannel>(BindingContext context) => typeof(TChannel) == typeof(IReplyChannel);
 
-        public override BindingElement Clone() => new TableTransportBindingElement { ConnectionString = this.ConnectionString, TargetPartitionKey = this.TargetPartitionKey };
+        public override BindingElement Clone() => new TableTransportBindingElement(this);
     }
 }

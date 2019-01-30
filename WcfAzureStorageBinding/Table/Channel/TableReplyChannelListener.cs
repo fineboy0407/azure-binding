@@ -38,7 +38,7 @@
                         return new TableReplyChannel(
                             this,
                             this.storageAccount.CreateCloudTableClient(),
-                            this.Uri.AbsolutePath,
+                            this.TableName,
                             this.targetPartitionKey,
                             this.bufferManager,
                             address,
@@ -48,7 +48,7 @@
 
         public override Uri Uri { get; }
 
-        private string TableName => this.Uri.AbsolutePath;
+        private string TableName => this.Uri.Host;
 
         protected override void OnAbort()
         {
@@ -87,14 +87,14 @@
             result.WaitApmTask();
         }
 
-        protected override bool OnEndWaitForChannel(IAsyncResult result) => true;
+        protected override bool OnEndWaitForChannel(IAsyncResult result) => throw new NotSupportedException("No peeking support");
 
         protected override void OnOpen(TimeSpan timeout)
         {
             this.OnOpenAsync(timeout).GetAwaiter().GetResult();
         }
 
-        protected override bool OnWaitForChannel(TimeSpan timeout) => true;
+        protected override bool OnWaitForChannel(TimeSpan timeout) => throw new NotSupportedException("No peeking support");
 
         private async Task OnOpenAsync(TimeSpan timeout)
         {

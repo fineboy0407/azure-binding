@@ -22,7 +22,7 @@
             BufferManager bufferManager,
             EndpointAddress address,
             MessageEncoder encoder,
-            Uri via) : base(channelManager, tableClient, via.AbsolutePath, targetPartition, bufferManager, address, encoder) =>
+            Uri via) : base(channelManager, tableClient, via.Host, targetPartition, bufferManager, address, encoder) =>
             this.Via = via;
 
         public Uri Via { get; }
@@ -44,11 +44,7 @@
             try
             {
                 var reqId = Guid.NewGuid().ToString();
-
-                // Write the request message
                 await this.WriteRequestMessageAsync(requestMessage, reqId).ConfigureAwait(false);
-
-                // Wait for the response
                 return await this.TryGetReplyMessageAsync(reqId, timeout);
             }
             catch (StorageException exception)
