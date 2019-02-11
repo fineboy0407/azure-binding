@@ -3,13 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.271
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding", "WcfAzureStorageBinding\AzureStorageBinding.csproj", "{5FDAE262-06FD-49C6-B44F-EC1AF1F326E5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding", "AzureStorageBinding\AzureStorageBinding.csproj", "{5FDAE262-06FD-49C6-B44F-EC1AF1F326E5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding.TestingContract", "WcfAzureStorageBinding.TestingContract\AzureStorageBinding.TestingContract.csproj", "{0FE943D0-366E-438F-AFED-87B79ADDEDC0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding.TestingContract", "AzureStorageBinding.TestingContract\AzureStorageBinding.TestingContract.csproj", "{0FE943D0-366E-438F-AFED-87B79ADDEDC0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding.TestingClient", "WcfAzureStorageBinding.TestingClient\AzureStorageBinding.TestingClient.csproj", "{ABBE7E78-B5CD-497E-94C9-BEC81977B2C0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding.TestingClient", "AzureStorageBinding.TestingClient\AzureStorageBinding.TestingClient.csproj", "{ABBE7E78-B5CD-497E-94C9-BEC81977B2C0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding.TestingService", "WcfAzureStorageBinding.TestingService\AzureStorageBinding.TestingService.csproj", "{79B3AE0D-9978-4FD6-A75F-3C4D359BCBF5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureStorageBinding.TestingService", "AzureStorageBinding.TestingService\AzureStorageBinding.TestingService.csproj", "{79B3AE0D-9978-4FD6-A75F-3C4D359BCBF5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
