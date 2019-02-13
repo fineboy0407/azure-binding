@@ -29,5 +29,17 @@
             this.transportBindingElement.ConnectionString = connectionString;
             this.transportBindingElement.TargetPartitionKey = targetPartitionKey;
         }
+
+        public string ConnectionString
+        {
+            get => this.transportBindingElement.ConnectionString;
+            set => this.transportBindingElement.ConnectionString = value;
+        }
+
+        public string TargetPartitionKey
+        {
+            get => this.transportBindingElement.TargetPartitionKey;
+            set => this.transportBindingElement.TargetPartitionKey = value;
+        }
     }
 }
