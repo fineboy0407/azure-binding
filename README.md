@@ -18,7 +18,7 @@ Server Side
 Client Side
 ```csharp
 var client =
-      new IServiceClient(new TableTransportBinding() 
+      new ServiceClient(new TableTransportBinding() 
       { 
           ConnectionString = "azure-storage-connectionstring", 
           TargetPartitionKey = "client-id" 
